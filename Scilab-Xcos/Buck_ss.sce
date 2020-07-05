@@ -14,9 +14,9 @@ clear
 clc
 
 // Converter quiescent parameters
-Vg = 40;            // Input voltage
-Rload = 10;         // Load resistance
-D = 0.613;          // Duty cycle
+Vg = 28;            // Input voltage
+Rload = 3;          // Load resistance
+D = 0.536;          // Duty cycle
 I = Vg*D/Rload;     // Output current
 V = D*Vg;           // Output voltage
 
@@ -28,11 +28,11 @@ Vd = 0.4;    // Diode forward voltage
 Rt = 20e-3;    // Transistor on-state resistance
 
 // Inductor
-L = 300e-6;   // Inductor value
-RL = 0.1;     // Inductor resistance
+L = 50e-6;    // Inductor value
+RL = 0.01;    // Inductor resistance
 
 // Capacitor
-Cout = 470e-6 // Capacitor value
+Cout = 500e-6 // Capacitor value
 
 // State-space model
 a1 = [-(RL+D*Rt+(1-D)*Rd)/L, -1/L, 0];
@@ -59,20 +59,25 @@ Vref = 5;     // Reference
 H = Vref/V;   // Sensor gain
 
 // Uncompensated loop gain
-Tv_u = syslin('c', H*Y(2,2)/Vm);
+Tv_u = syslin('c', H*Y(2,2)/Vm);        // Transfer function
+Ncoeff_Tv_u = coeff(Tv_u.num);          // Numerator coefficients
+Dcoeff_Tv_u = coeff(Tv_u.den);          // Denominator coefficients
+Tvu0 = Ncoeff_Tv_u(1)/Dcoeff_Tv_u(1);   // Low frequency gain
+w0 = sqrt(Dcoeff_Tv_u(1));              // Resonant frequency
+f0 = w0/(2*%pi);
 
 // Uncompensated phase margin and crossover frequency
 [phi_u, fc_u] = p_margin(Tv_u);
 
 // Desired phase margin and crossover frequency
-phi = 50;
-fc = 1000;
+phi = 52;
+fc = 5000;
 
 // Compensator design (PID)
 fz = fc*sqrt( (1 - sind(phi) )/( 1 + sind(phi) ) );
 fp = fc*sqrt( (1 + sind(phi) )/( 1 - sind(phi) ) );
 fL = fc/10;
-Gc0 = sqrt(fz/fp);
+Gc0 = (fc/f0)^2 * 1/Tvu0 * sqrt(fz/fp);
 
 wz = 2*%pi*fz;
 wp = 2*%pi*fp;
