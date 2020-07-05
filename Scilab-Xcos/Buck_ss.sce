@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 // Filename      : Buck_ss.m
 // Description   : Small-signal analysis of non-ideal Buck Converter. Modeling,
-//                 open-loop and closed loop analysis
+//                 open-loop and closed loop analysis (voltage control)
 // Version       : 01.00
 // Revision      : 00
 // Last modified : 07/02/2020
@@ -58,16 +58,22 @@ Vm = 4;       // PWM modulator gain
 Vref = 5;     // Reference
 H = Vref/V;   // Sensor gain
 
-// Uncompensated loop gain
-Tv_u = syslin('c', H*Y(2,2)/Vm);        // Transfer function
-Ncoeff_Tv_u = coeff(Tv_u.num);          // Numerator coefficients
-Dcoeff_Tv_u = coeff(Tv_u.den);          // Denominator coefficients
-Tvu0 = Ncoeff_Tv_u(1)/Dcoeff_Tv_u(1);   // Low frequency gain
-w0 = sqrt(Dcoeff_Tv_u(1));              // Resonant frequency
+// Uncompensated loop
+T_u = H/Vm                                  // Loop gain
+
+// 1. Gvd(s)
+Tvd_u = syslin('c', T_u*Y(2,2));            // Uncompensated Gvd(s) t. function
+Ncoeff_Tvd_u = coeff(Tvd_u.num);            // Numerator coefficients
+Dcoeff_Tvd_u = coeff(Tvd_u.den);            // Denominator coefficients
+Tvu0 = Ncoeff_Tvd_u(1)/Dcoeff_Tvd_u(1);     // Low frequency gain
+w0 = sqrt(Dcoeff_Tvd_u(1));                 // Resonant frequency
 f0 = w0/(2*%pi);
 
+// 2. Gvg(s)
+Tvg_u = syslin('c', Y(2,1)/(1 + T_u));      // Uncompensated Gvg(s) t. function
+
 // Uncompensated phase margin and crossover frequency
-[phi_u, fc_u] = p_margin(Tv_u);
+[phi_u, fc_u] = p_margin(Tvd_u);
 
 // Desired phase margin and crossover frequency
 phi = 52;
@@ -86,13 +92,30 @@ wL = 2*%pi*fL;
 Gc = Gc0*(1+wL/s)*(1+s/wz)/(1+s/wp);
 
 // Compensated loop gain
-Tv_c = syslin('c', Gc*H*Y(2,2)/Vm);
+T_c = Gc*H/Vm                           // Compensator
+Tvd_c = syslin('c', T_c*Y(2,2));        // Compensated Gvd(s) transfer function
+Tvg_c = syslin('c', Y(2,1)/(1 + T_c));  // Compensated Gvg(s) transfer function
+
 
 // Compensated phase margin and crossover frequency
-[phi_c, fc_c] = p_margin(Tv_c);
+[phi_c, fc_c] = p_margin(Tvd_c);
 
-// Bode plot
-clf(); bode(Tv_c, 0.01, 10000);
+// Bode plots
+
+// Analyzed transfer function
+/*
+ *  c = 1: Gvd(s)   - Control-to-Output
+ *  c = 2: Gvg(s)   - Line-to-Output
+ */ 
+c = 2;
+
+select c
+  case 1
+    clf(); bode([Tvd_u; Tvd_c], 0.01, 10000, ['Gvd_u(s)'; 'Gvd_c(s)']);
+  case 2
+    clf(); bode([Tvg_u; Tvg_c], 0.01, 10000, ['Gvg_u(s)'; 'Gvg_c(s)']);
+end
+
 
 
 
