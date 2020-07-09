@@ -1,12 +1,12 @@
 // -----------------------------------------------------------------------------
 // Copyright (C) 2020 Jaime M. Villegas I. [jaime7592@gmail.com]
 // -----------------------------------------------------------------------------
-// Filename      : Buck_ss.m
-// Description   : Small-signal analysis of non-ideal Buck Converter. Modeling,
+// Filename      : Boost_ss.m
+// Description   : Small-signal analysis of non-ideal Boost Converter. Modeling,
 //                 open-loop and closed loop analysis (voltage control)
 // Version       : 01.00
 // Revision      : 00
-// Last modified : 07/05/2020
+// Last modified : 07/08/2020
 // References    : R.W. Erickson, D. Maksimovic. "Fundamentals of Power
 //                 Electronics". 2nd ed. (2004)
 // -----------------------------------------------------------------------------
@@ -16,25 +16,26 @@ clc
 /*************************** Converter parameters ****************************/
 
 // Converter quiescent parameters
-Vg = 28;            // Input voltage
-Rload = 3;          // Load resistance
-D = 0.536;          // Duty cycle
-I = Vg*D/Rload;     // Output current
-V = D*Vg;           // Output voltage
+Vg = 48;               // Input voltage
+Rload = 12;            // Load resistance
+D = 0.6;               // Duty cycle
+V = Vg/(1-D);          // Output voltage
+I = V/(Rload*(1-D));   // Output current
+
 
 // Diode
 Rd = 10e-3;  // Diode on-state resistance
-Vd = 0.4;    // Diode forward voltage
+Vd = 0.7;    // Diode forward voltage
 
 // Transistor
-Rt = 20e-3;    // Transistor on-state resistance
+Rt = 10e-3;    // Transistor on-state resistance
 
 // Inductor
-L = 50e-6;    // Inductor value
-RL = 0.01;    // Inductor resistance
+L = 100e-6;    // Inductor value
+RL = 0.05;     // Inductor resistance
 
 // Capacitor
-Cout = 500e-6 // Capacitor value
+Cout = 33e-6   // Capacitor value
 
 // *************************** Simulation parameters *************************/
 
@@ -43,36 +44,31 @@ tsim = 10e-3;
 tstep = 100e-9;
 
 // 2. Line voltage and load current perturbations
-Vg_stp = 30;
+Vg_stp = 50;
 tstp_Vg = 0.8*tsim;
 
-Iload_stp = 5;
+Iload_stp = 10;
 tstp_Iload = 0.5*tsim;
 
 /***************************** Converter model *******************************/
 
 // State-space model
-a1 = [-(RL+D*Rt+(1-D)*Rd)/L, -1/L, 0];
-a2 = [1/Cout, -1/(Rload*Cout), 0];
-a3 = [-D*(RL+D*Rt+(1-D)*Rd)/L, -D/L, 0];
-
-A = [a1; a2; a3];
-B = [D/L, (Vg+Rd*I+Vd-Rt*I)/L, 0; 0, 0, 1; D^2/L, D*(Vg+Rd*I+Vd-Rt*I)/L, 1];
-C = [1, 0, 0; 0, 1, 0; 0, 0, 1];
+A = [-(RL+D*Rt+(1-D)*Rd)/L, -1/L; 1/Cout, -1/(Rload*Cout)];
+B = [D/L, (Vg+Rd*I+Vd-Rt*I)/L, 0; 0, 0, 1];
+C = [1, 0; 0, 1];
 
 // Polynomial variable
 s = poly(0,"s");
-Y = C*inv(s*eye(3,3) - A)*B;
+Y = C*inv(s*eye(2,2) - A)*B;
 
 // Transfer functions
 Gid = syslin('c', Y(1,2));    // iL(s)/d(s)
 Gvg = syslin('c', Y(2,1));    // v(s)/vg(s)
 Gvd = syslin('c', Y(2,2));    // v(s)/d(s)
-Gig = syslin('c', Y(3,2));    // iL(s)/vg(s)
 
 // Output impedance
 re = RL+D*Rt+(1-D)*Rd                             // Equivalent loss resistance
-Zout = ( 1/(s*L + re) + s*Cout + 1/Rload  )^(-1);
+Zout = ( 1/( (s*L + re)/(1-D)^2 ) + s*Cout + 1/Rload  )^(-1);
 
 /************************** Closed loop analysis ******************************/
 
@@ -102,8 +98,8 @@ Zout_u = syslin('c', Zout/(1 + T_u));       // // Uncompensated output impedance
 [phi_u, fc_u] = p_margin(Tvd_u);
 
 // Desired phase margin and crossover frequency
-phi = 52;
-fc = 5000;
+phi = 50;
+fc = 20000;
 
 // Compensator design (PID)
 fz = fc*sqrt( (1 - sind(phi) )/( 1 + sind(phi) ) );
@@ -134,33 +130,33 @@ Zout_c = syslin('c', Zout/(1 + T_c));
  *  c = 2: Gvg(s)   - Line-to-Output
  *  c = 3: Zout(s)  - Output impedance
  */ 
-c = 3;
+c = 2;
 
 select c
   case 1
-    clf(); bode([Tvd_u; Tvd_c], 0.01, 10000, ['Gvd_u(s)'; 'Gvd_c(s)']);
+    clf(); bode([Tvd_u; Tvd_c], 0.01, 100000, ['Gvd_u(s)'; 'Gvd_c(s)']);
   case 2
-    clf(); bode([Tvg_u; Tvg_c], 0.01, 10000, ['Gvg_u(s)'; 'Gvg_c(s)']);
+    clf(); bode([Tvg_u; Tvg_c], 0.01, 100000, ['Gvg_u(s)'; 'Gvg_c(s)']);
   case 3
-    clf(); bode([Zout_u; Zout_c], 0.01, 10000, ['Zout_u(s)'; 'Zout_c(s)']);
+    clf(); bode([Zout_u; Zout_c], 0.01, 100000, ['Zout_u(s)'; 'Zout_c(s)']);
 end
 
 // ***************************** Simulation results ***************************/
-/*
+
 // 1. Output voltage
 subplot(2,1,1)
 plot(vout_sim.time, vout_sim.values)
 xlabel("Time (s)", "fontsize", 2)
 ylabel("Voltage (V)", "fontsize", 2)
-title("Buck converter - Output voltage", "fontsize", 2.5)
+title("Boost converter - Output voltage", "fontsize", 2.5)
 
 // 2. Output current
 subplot(2,1,2)
 plot(Iload_sim.time, Iload_sim.values, 'b', Iload_sim.time, vout_sim.values / Rload, 'r')
 xlabel("Time (s)", "fontsize", 2)
 ylabel("Current (A)", "fontsize", 2)
-title("Buck converter - Output current", "fontsize", 2.5)
+title("Boost converter - Output current", "fontsize", 2.5)
 legend(["Iload perturbation"; "Iload"], "in_lower_right")
 
-*/
+
 
