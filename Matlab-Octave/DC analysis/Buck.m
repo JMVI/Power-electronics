@@ -14,10 +14,19 @@ clc
 
 % Converter parameters
 
-Vg = 40;         % Input voltage
-V = 15;          % Output voltage
-Iout = 5;        % Output current
-Rload = V/Iout;  % Load resistance
+Vg = 40;          % Input voltage
+V = 15;           % Output voltage
+d = V/Vg;         %
+Iout = 5;         % Output current
+Rload = V/Iout;   % Load resistance
+fs = 100e3;       % Switching frequency
+Ts = 1/fs;        % Switching period
+IL_ripple = 0.2;  % Inductor current ripple
+IC_ripple = 0.1;  % Capacitor current ripple
+VC_ripple = 0.25; % Capacitor voltage ripple
+
+L = V*(1-d)*Ts/(2*IL_ripple);   % Inductor
+C = IC_ripple*Ts/(8*VC_ripple); % Capacitor
 
 Dmin = 0.005;
 Dmax = 0.995;
