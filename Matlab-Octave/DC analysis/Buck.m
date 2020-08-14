@@ -5,7 +5,7 @@
 % Description   : DC analysis of non-ideal Buck Converter
 % Version       : 01.00
 % Revision      : 00
-% Last modified : 06/27/2020
+% Last modified : 08/12/2020
 % References    : R.W. Erickson, D. Maksimovic. "Fundamentals of Power
 %                 Electronics". 2nd ed. (2004)
 % ------------------------------------------------------------------------------
@@ -16,7 +16,7 @@ clc
 
 Vg = 40;          % Input voltage
 V = 15;           % Output voltage
-d = V/Vg;         %
+d = V/Vg;         % Ideal duty-cycle
 Iout = 5;         % Output current
 Rload = V/Iout;   % Load resistance
 fs = 100e3;       % Switching frequency
