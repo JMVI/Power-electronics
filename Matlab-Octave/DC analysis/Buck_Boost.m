@@ -5,7 +5,7 @@
 % Description   : DC analysis of non-ideal Buck-Boost Converter
 % Version       : 01.00
 % Revision      : 00
-% Last modified : 06/27/2020
+% Last modified : 08/20/2020
 % References    : R.W. Erickson, D. Maksimovic. "Fundamentals of Power
 %                 Electronics". 2nd ed. (2004)
 % ------------------------------------------------------------------------------
@@ -14,10 +14,19 @@ clc
 
 % Converter parameters
 
-Vg = -40;        % Input voltage
-V = 100;         % Output voltage
-Iout = 10;       % Output current
-Rload = V/Iout;  % Load resistance
+Vg = -10;         % Input voltage
+V = 25;           % Output voltage
+d = V/(V-Vg);     % Ideal duty-cycle
+Iout = 2;         % Output current
+Rload = V/Iout;   % Load resistance
+fs = 100e3;       % Switching frequency
+Ts = 1/fs;        % Switching period
+IL_ripple = 0.2;  % Inductor current ripple
+IC_ripple = 0.1;  % Capacitor current ripple
+VC_ripple = 0.25; % Capacitor voltage ripple
+
+L = -Vg*d*Ts/(2*IL_ripple);                      % Inductor
+C = -Vg*(d^2)*Ts/(2*Rload*((1-d)^2)*VC_ripple);  % Capacitor
 
 Dmin = 0.005;
 Dmax = 0.995;
