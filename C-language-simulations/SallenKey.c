@@ -5,7 +5,7 @@
  * Description   : 2nd Order Sallen-Key Filter simulation using Euler's Method.
  * Version       : 01.00
  * Revision      : 00
- * Last modified : 05/20/2021
+ * Last modified : 05/24/2021
  * -----------------------------------------------------------------------------
  */
 
@@ -61,6 +61,13 @@ double x2_0 = 0;       // Initial derivative of Voltage across capacitor 1
 //----------------------------------------------------------------------------//
 
 /**
+@brief  Initializes state-equations constants and parameters
+@param  None
+@retval None
+*/
+void Sallen_Key_init();
+
+/**
 @brief  ODE solver using Euler method
 @param  y:  Output state vector
         t0: Initial instant of time
@@ -71,19 +78,12 @@ double x2_0 = 0;       // Initial derivative of Voltage across capacitor 1
 void ODE_solve_Euler(double* y, double t0, double t1, double* x);
 
 /**
-@brief  Initializes state-equations constants and parameters
-@param  None
-@retval None
-*/
-void Sallen_Key_init();
-
-/**
 @brief  Updates state-equations values
 @param  sX: Derivative of state vector
          X: State vector
 @retval None
 */
-void Sallen_Key_state_eq(double* sX, double* X);
+void Sallen_Key_state_eq(double* sX, double* X, double In);
 
 //----------------------------------------------------------------------------//
 //                               Main function                                //
@@ -91,35 +91,72 @@ void Sallen_Key_state_eq(double* sX, double* X);
 
 int main()
 {
-  double data[SIM_NUM_STEPS];
-  unsigned int i = 0;
+  double data[SIM_NUM_STEPS];          // Data vector
+  unsigned int i = 0;                  // Iterator
+  size_t sz = 0;
+  double var = 0;
   
-  double x[SK_VAR_NUM] = {x1_0, x2_0};
-  double y[SK_VAR_NUM] = {0};
+  double x[SK_VAR_NUM] = {x1_0, x2_0}; // State vector
+  double y[SK_VAR_NUM] = {0};          // Output vector
   
-  /*
-  FILE* fp = NULL;
-  fp = fopen("sim_data.dat", "w+");
+  FILE* fp = NULL;                     // File pointer
   
+  // Initialization cycle
   
-  if(fp = NULL)
+  // Initialize plant constants
+  Sallen_Key_init();
+  
+  // Simulation cycle
+  for(i = 0; i < SIM_NUM_STEPS; i++)
+  {
+    ODE_solve_Euler(y, 
+                    (double)(i * SIM_STEP_TIME),
+                    (double)( (i + 1)*SIM_STEP_TIME ), 
+                    x);
+                       
+    x[SK_VC1] = y[SK_VC1];
+    x[SK_X]   = y[SK_X];
+    
+    // Adds capacitor voltage to data output vector
+    data[i] = y[SK_VC1];
+  }
+  
+  // End cycle
+  
+  // Output data file opening
+  fp = fopen("sim_dat.dat", "w+b");
+  
+  if(fp == NULL)
   {
     printf("ERROR IN OPENING SIMULATION FILE OPERATION");
     exit(-1);
   }
-  */
-  Sallen_Key_init();
   
+  // Writes data output in file
   for(i = 0; i < SIM_NUM_STEPS; i++)
   {
-    ODE_solve_Euler(y, (double)(i*SIM_STEP_TIME), (double)( (i + 1)*SIM_STEP_TIME ), x);
-    x[0] = y[0];
-    x[1] = y[1];
-    
-    //printf("%lf - %lf\n", y[0], y[1]);
+    fwrite(&data[i], sizeof(double), 1, fp);
   }
   
+  // Closes file
+  fclose(fp);
+  
   return 0;
+}
+
+/**
+@brief  Initializes state-equations constants and parameters
+@param  None
+@retval None
+*/
+void Sallen_Key_init()
+{
+  // Setting up OPAMP gain
+  double G = 1 + R4 / R3;
+  
+  // State-space constants
+  k1 = ( -1 / (R1 * R2 * C1 * C2) );
+  k2 = ( (R1 + R2) * C1 + (1 - G) * R1 * C2 ) * k1;
 }
 
 /**
@@ -132,27 +169,14 @@ int main()
 */
 void ODE_solve_Euler(double* y, double t0, double t1, double* x)
 {
-  double dev[2];
+  double dx[SK_VAR_NUM]; // Derivative of x
   
-  Sallen_Key_state_eq(dev, x);
+  // Updates state variables
+  Sallen_Key_state_eq(dx, x, Vref);
   
-  y[0] = x[0] + dev[0]*(t1-t0);
-  y[1] = x[1] + dev[1]*(t1-t0);
-}
-
-/**
-@brief  Initializes state-equations constants and parameters
-@param  None
-@retval None
-*/
-void Sallen_Key_init()
-{
-  // Setting up OPAMP gain
-  double G = 1 + R4/R3;
-  
-  // State-space constants
-  k1 = ( -1 / (R1*R2*C1*C2) );
-  k2 = ( (R1 + R2)*C1 + (1 - G)*R1*C2 ) * k1;
+  // Calculates step solution
+  y[SK_VC1] = x[SK_VC1] + dx[SK_VC1] * (t1 - t0);
+  y[SK_X]   = x[SK_X] + dx[SK_X] * (t1 - t0);
 }
 
 /**
@@ -161,12 +185,12 @@ void Sallen_Key_init()
          X: State vector
 @retval None
 */
-void Sallen_Key_state_eq(double* sX, double* X)
+void Sallen_Key_state_eq(double* sX, double* X, double In)
 {
   // sX1
   sX[SK_VC1] = X[SK_X];
   
   // sX2
-  sX[SK_X] = k1*X[SK_VC1] + k2*X[SK_X] - k1*Vref;
+  sX[SK_X] = k1 * X[SK_VC1] + k2 * X[SK_X] - k1 * In;
 }
 
