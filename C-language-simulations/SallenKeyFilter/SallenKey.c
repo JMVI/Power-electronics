@@ -15,6 +15,7 @@
 
 #include<stdio.h>
 #include<stdlib.h>
+#include <stdbool.h>
 
 //----------------------------------------------------------------------------//
 //                            General definitions                             //
@@ -23,6 +24,9 @@
 // Simulation parameters
 #define SIM_NUM_STEPS     5000
 #define SIM_STEP_TIME     100e-6
+
+// Activate closed-loop control
+#define CLOSED_LOOP_ON    false
 
 /***** Sallen-Key circuit parameters *****/
 
@@ -56,6 +60,9 @@ double k2 = 0;
 double x1_0 = 0;       // Initial voltage across capacitor 1
 double x2_0 = 0;       // Initial derivative of Voltage across capacitor 1
 
+// PID Controller
+double Kp = 7.86, Ki = 2015.4 , Kd = 0.075;
+
 //----------------------------------------------------------------------------//
 //                      Private functions prototypes                          //
 //----------------------------------------------------------------------------//
@@ -85,6 +92,15 @@ void ODE_solve_Euler(double* y, double t0, double t1, double* x);
 */
 void Sallen_Key_state_eq(double* sX, double* X, double In);
 
+/**
+@brief  PID controller
+@param  err: Error signal
+         t0: Initial instant of time
+         t1: Next instant of time
+@retval Control signal
+*/
+double PID_Controller(double err, double t0, double t1);
+
 //----------------------------------------------------------------------------//
 //                               Main function                                //
 //----------------------------------------------------------------------------//
@@ -93,27 +109,27 @@ int main()
 {
   double data[SIM_NUM_STEPS];          // Data vector
   unsigned int i = 0;                  // Iterator
-  size_t sz = 0;
-  double var = 0;
   
   double x[SK_VAR_NUM] = {x1_0, x2_0}; // State vector
   double y[SK_VAR_NUM] = {0};          // Output vector
   
   FILE* fp = NULL;                     // File pointer
   
-  // Initialization cycle
+  /************************* Initialization cycle *****************************/
   
   // Initialize plant constants
   Sallen_Key_init();
   
-  // Simulation cycle
+  /*************************** Simulation cycle *******************************/
+  
   for(i = 0; i < SIM_NUM_STEPS; i++)
   {
     ODE_solve_Euler(y, 
                     (double)(i * SIM_STEP_TIME),
                     (double)( (i + 1)*SIM_STEP_TIME ), 
                     x);
-                       
+    
+    // Updates state vector              
     x[SK_VC1] = y[SK_VC1];
     x[SK_X]   = y[SK_X];
     
@@ -121,7 +137,7 @@ int main()
     data[i] = y[SK_VC1];
   }
   
-  // End cycle
+  /******************************* End cycle **********************************/
   
   // Output data file opening
   fp = fopen("sim_dat.dat", "w+b");
@@ -170,9 +186,21 @@ void Sallen_Key_init()
 void ODE_solve_Euler(double* y, double t0, double t1, double* x)
 {
   double dx[SK_VAR_NUM]; // Derivative of x
+  double u = 0;          // Input signal
+  double err = 0;
+  
+  if(CLOSED_LOOP_ON == true)
+  {
+    err = Vref - y[SK_VC1];
+    u = PID_Controller(err, t0, t1);
+  }
+  else
+  {
+    u = Vref;
+  }
   
   // Updates state variables
-  Sallen_Key_state_eq(dx, x, Vref);
+  Sallen_Key_state_eq(dx, x, u);
   
   // Calculates step solution
   y[SK_VC1] = x[SK_VC1] + dx[SK_VC1] * (t1 - t0);
@@ -192,5 +220,30 @@ void Sallen_Key_state_eq(double* sX, double* X, double In)
   
   // sX2
   sX[SK_X] = k1 * X[SK_VC1] + k2 * X[SK_X] - k1 * In;
+}
+
+/**
+@brief  PID controller
+@param  err: Error signal
+         t0: Initial instant of time
+         t1: Next instant of time
+@retval Control signal
+*/
+double PID_Controller(double err, double t0, double t1)
+{
+  static double sumError = 0;    // Cumulated error (integrative term)
+  static double diffError = 0;   // Differential error (derivative term)
+  static double err_1 = 0;       // Last error value
+  
+  // Integrative error
+  sumError += err * (t1 - t0);
+  
+  // Derivative error
+  diffError = (err - err_1) / (t1 - t0);
+  
+  // Stores last error value
+  err_1 = err;
+  
+  return Kp*err + Ki*sumError + Kd*diffError;
 }
 
