@@ -22,11 +22,11 @@
 //----------------------------------------------------------------------------//
 
 // Simulation parameters
-#define SIM_NUM_STEPS     5000
-#define SIM_STEP_TIME     100e-6
+#define SIM_NUM_STEPS     25000
+#define SIM_STEP_TIME     10e-6
 
 // Activate closed-loop control
-#define CLOSED_LOOP_ON    false
+#define CLOSED_LOOP_ON    true
 
 /***** Sallen-Key circuit parameters *****/
 
