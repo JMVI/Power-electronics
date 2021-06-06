@@ -5,7 +5,7 @@
 % Description   : Results analysis of 2nd Order Sallen-Key Filter simulation 
 % Version       : 01.00
 % Revision      : 00
-% Last modified : 05/24/2021
+% Last modified : 05/31/2021
 % ------------------------------------------------------------------------------
 clear
 clc
@@ -22,7 +22,7 @@ C2 = 470e-9;
 
 G = 1 + R4 / R3;
 
-Vref = 10;
+Vref = 25;
 
 k1 = R1*R2*C1*C2;
 k2 = (R1 + R2)*C1 + R1*C2*(1 - G);
@@ -31,6 +31,16 @@ k2 = (R1 + R2)*C1 + R1*C2*(1 - G);
 KP = 7.86;
 KI = 2015.4;
 KD = 0.075;
+
+%% Ziegler-Nichols Method
+% Tcr = 0.4992 - 0.4914;
+% Kcr = 13.1;
+% td = 0.125 * Tcr;
+% ti = 0.5 * Tcr;
+% Kp = 0.6 * Kcr;
+% Ki = Kp / ti;
+% Kd = Kp * td;
+
 
 % Transfer functions
 s = tf('s');
@@ -42,7 +52,7 @@ Vc1_Vin_CL = feedback(Vc1_Vin*Gc);
 Sim_closed_loop = 1;
 
 % Simulation parameters
-sim_num_steps = 25000;
+sim_num_steps = 50000;
 sim_step_time = 10e-6;
 
 % Time axis

@@ -5,7 +5,7 @@
  * Description   : 2nd Order Sallen-Key Filter simulation using Euler's Method.
  * Version       : 01.00
  * Revision      : 00
- * Last modified : 05/24/2021
+ * Last modified : 05/31/2021
  * -----------------------------------------------------------------------------
  */
 
@@ -22,7 +22,7 @@
 //----------------------------------------------------------------------------//
 
 // Simulation parameters
-#define SIM_NUM_STEPS     25000
+#define SIM_NUM_STEPS     50000
 #define SIM_STEP_TIME     10e-6
 
 // Activate closed-loop control
@@ -41,7 +41,7 @@ const double C1 = 470e-9;
 const double C2 = 470e-9;
 
 // Voltage reference
-const double Vref = 10;
+const double Vref = 25;
 
 // Sallen-Key State Variables
 typedef enum
@@ -61,7 +61,8 @@ double x1_0 = 0;       // Initial voltage across capacitor 1
 double x2_0 = 0;       // Initial derivative of Voltage across capacitor 1
 
 // PID Controller
-double Kp = 7.86, Ki = 2015.4 , Kd = 0.075;
+// double Kp = 7.86, Ki = 2015.4 , Kd = 0.075;
+double Kp = 0.15, Ki = 25.0, Kd = 0.0;
 
 //----------------------------------------------------------------------------//
 //                      Private functions prototypes                          //
