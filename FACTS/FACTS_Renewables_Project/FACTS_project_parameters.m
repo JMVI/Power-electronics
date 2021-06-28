@@ -39,18 +39,18 @@ Xload = 2*pi*f*Lload;     % Load reactance (ohm)
 
 % Generator voltage and current file reading
 
-fp = fopen("TPGenerator.csv", "r");   % Opens file
-data = csvread(fp);                   % Reads stored variable
-tg = data(:, 1);                      % Time axis
-T = tg(end - 1);                      % Integration period
-Vg = data(:, 2);                      % Generator voltage
-Vg_RMS = (1/T)*trapz(tg, Vg);         % RMS generator voltage
-Ig = data(:, 4);                      % Generator current
-Ig_RMS = (1/T)*trapz(tg, Ig);         % RMS generator current
-pg = Vg.*Ig;                          % Instantaneous generator power
-PG = (1/T)*trapz(tg, pg);             % Average active power of generator
-SG = abs(Vg_RMS*Ig_RMS);              % Mean generated complex power
-fclose(fp);                           % Closes file
+fp = fopen("TPGenerator.csv", "r");     % Opens file
+data = csvread(fp);                     % Reads stored variable
+tg = data(:, 1);                        % Time axis
+T = tg(end - 1);                        % Integration period
+Vg = data(:, 2);                        % Generator voltage
+Vg_RMS = sqrt((1/T)*trapz(tg, Vg.^2));  % RMS generator voltage
+Ig = data(:, 4);                        % Generator current
+Ig_RMS = sqrt((1/T)*trapz(tg, Ig.^2));  % RMS generator current
+pg = Vg.*Ig;                            % Instantaneous generator power
+PG = (1/T)*trapz(tg, pg)/1e6;           % Average active power of generator (MW)
+SG = Vg_RMS*Ig_RMS/1e6;                 % Generator complex power (MVA)
+fclose(fp);                             % Closes file
 
 % Load current file reading and load power consumption
 
@@ -59,11 +59,26 @@ data = csvread(fp);                     % Reads stored variable
 tload = data(:, 1);                     % Time axis
 Iload = data(:, 2);                     % Load current
 pload = Rload*Iload.^2;                 % Instantaneous active power consumption
-PLOAD = (1/T)*trapz(tload, pload);      % Active power consumption
+PLOAD = (1/T)*trapz(tload, pload)/1e6;  % Active power consumption (MW)
 qload = Xload*Iload.^2;                 % Reactive power consumption
-QLOAD = (1/T)*trapz(tload, qload);      % Mean consumed reactive power
-SLOAD = sqrt(PLOAD^2 + QLOAD^2);        % Complex power consumption
+QLOAD = (1/T)*trapz(tload, qload)/1e6;  % Consumed reactive power (MVAR)
+SLOAD = sqrt(PLOAD^2 + QLOAD^2);        % Complex power consumption (MVA)
 fclose(fp);                             % Closes file
+
+% Wind farm voltage and current file reading
+
+fp = fopen("WindFarm.csv", "r");                % Opens file
+data = csvread(fp);                             % Reads stored variable
+twind = data(:, 1);                             % Time axis
+T = twind(end - 1);                             % Integration period
+Vwind = data(:, 2);                             % Wind farm voltage
+Vwind_RMS = sqrt((1/T)*trapz(twind, Vwind.^2)); % RMS wind farm voltage
+Iwind = data(:, 4);                             % Wind farm current
+Iwind_RMS = sqrt((1/T)*trapz(twind, Iwind.^2)); % RMS wind farm current
+pwind = Vwind.*Iwind;                           % Instantaneous wind farm power
+PWIND = (1/T)*trapz(twind, pwind)/1e6;          % Active power of wind farm (MW)
+SWIND = Vwind_RMS*Iwind_RMS/1e6;                % Wind farm complex power (MVA)
+fclose(fp);   
 
 % plot(tload(1:length(tload)-1), Pload(1:length(Pload)-1))
 
